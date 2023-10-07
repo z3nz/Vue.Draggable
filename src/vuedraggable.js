@@ -310,13 +310,14 @@ const draggableComponent = {
       return { index, element };
     },
 
-    getUnderlyingPotencialDraggableComponent({ __vue__: vue }) {
+    getUnderlyingPotencialDraggableComponent(to) {
+      console.log(to);
+      let vue = to.__vue__ || { $children: [] };
       if (
         !vue ||
         !vue.$options ||
         !isTransitionName(vue.$options._componentTag)
       ) {
-        vue = vue || { $children: [] }
         if (
           !("realList" in vue) &&
           vue.$children.length === 1 &&

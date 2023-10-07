@@ -3931,13 +3931,13 @@ var draggableComponent = {
         element: element
       };
     },
-    getUnderlyingPotencialDraggableComponent: function getUnderlyingPotencialDraggableComponent(_ref) {
-      var vue = _ref.__vue__;
+    getUnderlyingPotencialDraggableComponent: function getUnderlyingPotencialDraggableComponent(to) {
+      helper["b" /* console */].log(to);
+      var vue = to.__vue__ || {
+        $children: []
+      };
 
       if (!vue || !vue.$options || !isTransitionName(vue.$options._componentTag)) {
-        vue = vue || {
-          $children: []
-        };
         if (!("realList" in vue) && vue.$children.length === 1 && "realList" in vue.$children[0]) return vue.$children[0];
         return vue;
       }
@@ -3978,9 +3978,9 @@ var draggableComponent = {
 
       this.alterList(updatePosition);
     },
-    getRelatedContextFromMoveEvent: function getRelatedContextFromMoveEvent(_ref2) {
-      var to = _ref2.to,
-          related = _ref2.related;
+    getRelatedContextFromMoveEvent: function getRelatedContextFromMoveEvent(_ref) {
+      var to = _ref.to,
+          related = _ref.related;
       var component = this.getUnderlyingPotencialDraggableComponent(to);
 
       if (!component) {
