@@ -316,6 +316,7 @@ const draggableComponent = {
         !vue.$options ||
         !isTransitionName(vue.$options._componentTag)
       ) {
+        vue = vue || { $children: [] }
         if (
           !("realList" in vue) &&
           vue.$children.length === 1 &&
