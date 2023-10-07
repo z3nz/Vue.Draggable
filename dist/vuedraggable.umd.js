@@ -3614,6 +3614,11 @@ var helper = __webpack_require__("c649");
 
 
 
+if (external_commonjs_sortablejs_commonjs2_sortablejs_amd_sortablejs_root_Sortable_["MultiDrag"] && !external_commonjs_sortablejs_commonjs2_sortablejs_amd_sortablejs_root_Sortable_["MultiDrag"].singleton) {
+  external_commonjs_sortablejs_commonjs2_sortablejs_amd_sortablejs_root_Sortable_["MultiDrag"].singleton = new external_commonjs_sortablejs_commonjs2_sortablejs_amd_sortablejs_root_Sortable_["MultiDrag"]();
+  external_commonjs_sortablejs_commonjs2_sortablejs_amd_sortablejs_root_Sortable_default.a.mount(external_commonjs_sortablejs_commonjs2_sortablejs_amd_sortablejs_root_Sortable_["MultiDrag"].singleton);
+}
+
 function buildAttribute(object, propName, value) {
   if (value === undefined) {
     return object;
@@ -3788,6 +3793,21 @@ var props = {
     type: Object,
     required: false,
     default: null
+  },
+  multiDrag: {
+    type: Boolean,
+    required: false,
+    default: false
+  },
+  multiDragKey: {
+    type: String,
+    required: false,
+    default: null
+  },
+  selectedClass: {
+    type: String,
+    required: false,
+    default: null
   }
 };
 var draggableComponent = {
@@ -3826,6 +3846,10 @@ var draggableComponent = {
     if (this.options !== undefined) {
       helper["b" /* console */].warn("Options props is deprecated, add sortable options directly as vue.draggable item, or use v-bind. See https://github.com/SortableJS/Vue.Draggable/blob/master/documentation/migrate.md#options-props");
     }
+
+    if (this.multiDrag && (this.selectedClass || "") === "") {
+      helper["b" /* console */].warn("selected-class must be set when multi-drag mode. See https://github.com/SortableJS/Sortable/wiki/Dragging-Multiple-Items-in-Sortable#enable-multi-drag");
+    }
   },
   mounted: function mounted() {
     var _this3 = this;
@@ -3853,6 +3877,16 @@ var draggableComponent = {
       }
     });
     !("draggable" in options) && (options.draggable = ">*");
+
+    if (this.multiDrag) {
+      options.multiDrag = true;
+      options.selectedClass = this.selectedClass;
+
+      if (this.multiDragKey) {
+        options.multiDragKey = this.multiDragKey;
+      }
+    }
+
     this._sortable = new external_commonjs_sortablejs_commonjs2_sortablejs_amd_sortablejs_root_Sortable_default.a(this.rootContainer, options);
     this.computeIndexes();
   },
@@ -3931,11 +3965,8 @@ var draggableComponent = {
         element: element
       };
     },
-    getUnderlyingPotencialDraggableComponent: function getUnderlyingPotencialDraggableComponent(to) {
-      helper["b" /* console */].dir(to);
-      var vue = to.__vue__ || {
-        $children: []
-      };
+    getUnderlyingPotencialDraggableComponent: function getUnderlyingPotencialDraggableComponent(_ref) {
+      var vue = _ref.__vue__;
 
       if (!vue || !vue.$options || !isTransitionName(vue.$options._componentTag)) {
         if (!("realList" in vue) && vue.$children.length === 1 && "realList" in vue.$children[0]) return vue.$children[0];
@@ -3978,9 +4009,9 @@ var draggableComponent = {
 
       this.alterList(updatePosition);
     },
-    getRelatedContextFromMoveEvent: function getRelatedContextFromMoveEvent(_ref) {
-      var to = _ref.to,
-          related = _ref.related;
+    getRelatedContextFromMoveEvent: function getRelatedContextFromMoveEvent(_ref2) {
+      var to = _ref2.to,
+          related = _ref2.related;
       var component = this.getUnderlyingPotencialDraggableComponent(to);
 
       if (!component) {
