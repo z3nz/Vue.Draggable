@@ -3923,7 +3923,7 @@ var draggableComponent = {
       };
     },
     getUnderlyingPotencialDraggableComponent: function getUnderlyingPotencialDraggableComponent(to) {
-      helper["b" /* console */].log(to);
+      helper["b" /* console */].dir(to);
       var vue = to.__vue__ || {
         $children: []
       };

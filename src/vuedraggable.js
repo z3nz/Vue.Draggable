@@ -311,7 +311,7 @@ const draggableComponent = {
     },
 
     getUnderlyingPotencialDraggableComponent(to) {
-      console.log(to);
+      console.dir(to);
       let vue = to.__vue__ || { $children: [] };
       if (
         !vue ||
