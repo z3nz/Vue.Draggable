@@ -975,6 +975,23 @@ module.exports = function (it) {
 
 /***/ }),
 
+/***/ "2f21":
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var fails = __webpack_require__("79e5");
+
+module.exports = function (method, arg) {
+  return !!method && fails(function () {
+    // eslint-disable-next-line no-useless-call
+    arg ? method.call(null, function () { /* empty */ }, 1) : method.call(null);
+  });
+};
+
+
+/***/ }),
+
 /***/ "2fdb":
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1606,6 +1623,37 @@ var uid = __webpack_require__("62a0");
 module.exports = function (key) {
   return shared[key] || (shared[key] = uid(key));
 };
+
+
+/***/ }),
+
+/***/ "55dd":
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var $export = __webpack_require__("5ca1");
+var aFunction = __webpack_require__("d8e8");
+var toObject = __webpack_require__("4bf8");
+var fails = __webpack_require__("79e5");
+var $sort = [].sort;
+var test = [1, 2, 3];
+
+$export($export.P + $export.F * (fails(function () {
+  // IE8-
+  test.sort(undefined);
+}) || !fails(function () {
+  // V8 bug
+  test.sort(null);
+  // Old WebKit
+}) || !__webpack_require__("2f21")($sort)), 'Array', {
+  // 22.1.3.25 Array.prototype.sort(comparefn)
+  sort: function sort(comparefn) {
+    return comparefn === undefined
+      ? $sort.call(toObject(this))
+      : $sort.call(toObject(this), aFunction(comparefn));
+  }
+});
 
 
 /***/ }),
@@ -3460,6 +3508,9 @@ if (typeof window !== 'undefined') {
 // Indicate to webpack that this file can be concatenated
 /* harmony default export */ var setPublicPath = (null);
 
+// EXTERNAL MODULE: ./node_modules/core-js/modules/es6.array.sort.js
+var es6_array_sort = __webpack_require__("55dd");
+
 // EXTERNAL MODULE: ./node_modules/core-js/modules/es6.object.assign.js
 var es6_object_assign = __webpack_require__("f751");
 
@@ -3614,6 +3665,7 @@ var helper = __webpack_require__("c649");
 
 
 
+
 if (external_commonjs_sortablejs_commonjs2_sortablejs_amd_sortablejs_root_Sortable_["MultiDrag"] && !external_commonjs_sortablejs_commonjs2_sortablejs_amd_sortablejs_root_Sortable_["MultiDrag"].singleton) {
   external_commonjs_sortablejs_commonjs2_sortablejs_amd_sortablejs_root_Sortable_["MultiDrag"].singleton = new external_commonjs_sortablejs_commonjs2_sortablejs_amd_sortablejs_root_Sortable_["MultiDrag"]();
   external_commonjs_sortablejs_commonjs2_sortablejs_amd_sortablejs_root_Sortable_default.a.mount(external_commonjs_sortablejs_commonjs2_sortablejs_amd_sortablejs_root_Sortable_["MultiDrag"].singleton);
@@ -3750,7 +3802,7 @@ function getComponentAttributes($attrs, componentData) {
 }
 
 var eventsListened = ["Start", "Add", "Remove", "Update", "End"];
-var eventsToEmit = ["Choose", "Unchoose", "Sort", "Filter", "Clone"];
+var eventsToEmit = ["Choose", "Unchoose", "Sort", "Filter", "Clone", "Select", "Deselect"];
 var readonlyProperties = ["Move"].concat(eventsListened, eventsToEmit).map(function (evt) {
   return "on" + evt;
 });
@@ -3965,6 +4017,12 @@ var draggableComponent = {
         element: element
       };
     },
+    getUnderlyingVmList: function getUnderlyingVmList(htmlElts) {
+      var list = htmlElts.map(this.getUnderlyingVm);
+      return list.filter(function (e) {
+        return !!e;
+      });
+    },
     getUnderlyingPotencialDraggableComponent: function getUnderlyingPotencialDraggableComponent(_ref) {
       var vue = _ref.__vue__;
 
@@ -4056,8 +4114,22 @@ var draggableComponent = {
       transitionContainer.kept = undefined;
     },
     onDragStart: function onDragStart(evt) {
+      if (evt.items && evt.items.length) {
+        this.doDragStartList(evt);
+      } else {
+        this.doDragStart(evt);
+      }
+    },
+    doDragStart: function doDragStart(evt) {
       this.context = this.getUnderlyingVm(evt.item);
       evt.item._underlying_vm_ = this.clone(this.context.element);
+      draggingElement = evt.item;
+    },
+    doDragStartList: function doDragStartList(evt) {
+      this.context = this.getUnderlyingVmList(evt.items);
+      evt.item._underlying_vm_ = this.clone(this.context.map(function (e) {
+        return e.element;
+      }));
       draggingElement = evt.item;
     },
     onDragAdd: function onDragAdd(evt) {
@@ -4067,6 +4139,13 @@ var draggableComponent = {
         return;
       }
 
+      if (Array.isArray(element)) {
+        this.doDragAddList(evt, element);
+      } else {
+        this.doDragAdd(evt, element);
+      }
+    },
+    doDragAdd: function doDragAdd(evt, element) {
       Object(helper["d" /* removeNode */])(evt.item);
       var newIndex = this.getVmIndex(evt.newIndex);
       this.spliceList(newIndex, 0, element);
@@ -4079,7 +4158,36 @@ var draggableComponent = {
         added: added
       });
     },
+    doDragAddList: function doDragAddList(evt, elements) {
+      if (elements.length === 0) {
+        return;
+      }
+
+      evt.items.forEach(helper["d" /* removeNode */]);
+      var newIndexFrom = this.getVmIndex(evt.newIndex);
+      this.alterList(function (list) {
+        return list.splice.apply(list, [newIndexFrom, 0].concat(_toConsumableArray(elements)));
+      });
+      var added = elements.map(function (element, index) {
+        var newIndex = newIndexFrom + index;
+        return {
+          element: element,
+          newIndex: newIndex
+        };
+      });
+      this.computeIndexes();
+      this.emitChanges({
+        added: added
+      });
+    },
     onDragRemove: function onDragRemove(evt) {
+      if (Array.isArray(this.context)) {
+        this.doDragRemoveList(evt);
+      } else {
+        this.doDragRemove(evt);
+      }
+    },
+    doDragRemove: function doDragRemove(evt) {
       Object(helper["c" /* insertNodeAt */])(this.rootContainer, evt.item, evt.oldIndex);
 
       if (evt.pullMode === "clone") {
@@ -4089,16 +4197,63 @@ var draggableComponent = {
 
       var oldIndex = this.context.index;
       this.spliceList(oldIndex, 1);
+      this.resetTransitionData(oldIndex);
       var removed = {
         element: this.context.element,
         oldIndex: oldIndex
       };
-      this.resetTransitionData(oldIndex);
+      this.emitChanges({
+        removed: removed
+      });
+    },
+    doDragRemoveList: function doDragRemoveList(evt) {
+      var _this6 = this;
+
+      evt.items.forEach(function (item, index) {
+        Object(helper["c" /* insertNodeAt */])(_this6.rootContainer, item, evt.oldIndicies[index].index);
+      });
+
+      if (evt.pullMode === "clone") {
+        if (evt.clones) {
+          evt.clones.forEach(helper["d" /* removeNode */]);
+        } else {
+          Object(helper["d" /* removeNode */])(evt.clone);
+        }
+
+        return;
+      }
+
+      var reversed = this.context.sort(function (a, b) {
+        return b.index - a.index;
+      });
+      var removed = reversed.map(function (item) {
+        var oldIndex = item.index;
+
+        _this6.resetTransitionData(oldIndex);
+
+        return {
+          element: item.element,
+          oldIndex: oldIndex
+        };
+      });
+      this.alterList(function (list) {
+        removed.forEach(function (removedItem) {
+          list.splice(removedItem.oldIndex, 1);
+        });
+      });
+      this.computeIndexes();
       this.emitChanges({
         removed: removed
       });
     },
     onDragUpdate: function onDragUpdate(evt) {
+      if (Array.isArray(this.context)) {
+        this.doDragUpdateList(evt);
+      } else {
+        this.doDragUpdate(evt);
+      }
+    },
+    doDragUpdate: function doDragUpdate(evt) {
       Object(helper["d" /* removeNode */])(evt.item);
       Object(helper["c" /* insertNodeAt */])(evt.from, evt.item, evt.oldIndex);
       var oldIndex = this.context.index;
@@ -4109,6 +4264,46 @@ var draggableComponent = {
         oldIndex: oldIndex,
         newIndex: newIndex
       };
+      this.emitChanges({
+        moved: moved
+      });
+    },
+    doDragUpdateList: function doDragUpdateList(evt) {
+      var _this7 = this;
+
+      evt.items.forEach(function (item, index) {
+        var c = _this7.context[index];
+        Object(helper["d" /* removeNode */])(item);
+        Object(helper["c" /* insertNodeAt */])(evt.from, item, c.index);
+      }); // eslint-disable-next-line prettier/prettier
+
+      var newIndexFrom = this.getVmIndex(evt.newIndex) - evt.items.indexOf(evt.item);
+      var moved = this.context.map(function (item, index) {
+        var oldIndex = item.index;
+        var newIndex = newIndexFrom + index;
+        return {
+          element: item.element,
+          oldIndex: oldIndex,
+          newIndex: newIndex
+        };
+      });
+      this.alterList(function (list) {
+        var target = moved.slice(); // remove moved elements from old index
+
+        target.sort(function (a, b) {
+          return b.oldIndex - a.oldIndex;
+        });
+        target.forEach(function (e) {
+          return list.splice(e.oldIndex, 1);
+        }); // add moved elements to new index
+
+        target.sort(function (a, b) {
+          return a.newIndex - b.newIndex;
+        });
+        target.forEach(function (e) {
+          return list.splice(e.newIndex, 0, e.element);
+        });
+      });
       this.emitChanges({
         moved: moved
       });
@@ -4149,7 +4344,8 @@ var draggableComponent = {
       });
       return onMove(sendEvt, originalEvent);
     },
-    onDragEnd: function onDragEnd() {
+    onDragEnd: function onDragEnd(evt) {
+      evt.items.forEach(external_commonjs_sortablejs_commonjs2_sortablejs_amd_sortablejs_root_Sortable_default.a.utils.deselect);
       this.computeIndexes();
       draggingElement = null;
     }
